@@ -324,6 +324,11 @@ class ZipFile(zipfile.ZipFile):
             zinfo.compress_size = file_size
         zinfo.CRC = CRC
         zinfo.file_size = file_size
+        if not filename:
+            zip64 = zinfo.file_size > ZIP64_LIMIT or \
+                    zinfo.compress_size > ZIP64_LIMIT
+            if zip64 and not self._allowZip64:
+                raise zipfile.LargeZipFile("Filesize would require ZIP64 extensions")
         if not zip64 and self._allowZip64:
             if file_size > ZIP64_LIMIT:
                 raise RuntimeError('File size has increased during compressing')
@@ -421,6 +426,8 @@ class ZipFile(zipfile.ZipFile):
                     centDirOffset > ZIP64_LIMIT or
                     centDirSize > ZIP64_LIMIT):
                     # Need to write the ZIP64 end-of-archive records
+                    if not self._allowZip64:
+                        raise zipfile.LargeZipFile(" would require ZIP64 extensions")
                     zip64endrec = struct.pack(
                             structEndArchive64, stringEndArchive64,
                             44, 45, 45, 0, 0, centDirCount, centDirCount,
